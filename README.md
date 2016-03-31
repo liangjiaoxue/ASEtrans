@@ -8,18 +8,21 @@ get_geneID.pl  generate the corresponding lists between allele IDs and transcrip
 -----------------------------------------------------------------------------------------
 # Usage:
 
-## prepare vcf file
+Prepare vcf file
+
 /usr/local/tabix/latest/bin/bgzip   xxx.vcf
+
 /usr/local/tabix/latest/bin/tabix -p vcf xxx.vcf.gz
 
-## get transcripts
+Get transcripts
+
 perl get_allele_specific_transcripts.pl --gff  <gff>  --genomefile <genome>  --vcf <vcf>  --out <out>
-#  vcf --> vcf data of hybrid sample
-# genome --> reference genome fasta file used to generate vcf file
-# this script requires Vcf.pm
+vcf --> vcf data of hybrid sample
+genome --> reference genome fasta file used to generate vcf file
+this script requires Vcf.pm
 
 
-## get gene list file
+Get gene list file
 perl get_geneID.pl --gff  <gff>  --out <out>
 
 
