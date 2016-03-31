@@ -27,7 +27,7 @@ perl get_allele_specific_transcripts.pl --gff  gff  --genomefile genome  --vcf v
 
 Get gene list file:
 
-perl get_geneID.pl --gff  <gff>  --out <out>
+perl get_geneID.pl --gff  gff  --out out
 
 
 # DEMO command line for RSEM
