@@ -30,13 +30,18 @@ perl get_geneID.pl --gff  <gff>  --out <out>
 
 # DEMO command line for RSEM
 cd RSEM
+
 /usr/local/rsem/latest/rsem-prepare-reference  \
 
-            --transcript-to-gene-map P1979_gene_list.txt  \
             
-                       --bowtie2 --bowtie2-path /usr/local/bowtie2/latest/bin/ \
+   --transcript-to-gene-map P1979_gene_list.txt  \
+            
+                
+       --bowtie2 --bowtie2-path /usr/local/bowtie2/latest/bin/ \
                        
-                       P1979_allele_trans.fasta  ref/P1979_allele_ref &
+                       
+    P1979_allele_trans.fasta  ref/P1979_allele_ref &
+    
 
 
 /usr/local/rsem/latest/rsem-calculate-expression -p 5 --paired-end   \
