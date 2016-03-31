@@ -18,11 +18,11 @@ Get transcripts:
 
 perl get_allele_specific_transcripts.pl --gff  gff  --genomefile genome  --vcf vcf  --out out
 
-vcf --> vcf data of hybrid sample
+      vcf --> vcf data of hybrid sample
 
-genome --> reference genome fasta file used to generate vcf file
+      genome --> reference genome fasta file used to generate vcf file
 
-This script requires Vcf.pm
+      This script requires Vcf.pm
 
 
 Get gene list file:
