@@ -6,8 +6,8 @@ get_allele_specific_transcripts.pl introduce variants from a VCF file into trans
 get_geneID.pl  generate the corresponding lists between allele IDs and transcripts IDs.
 
 -----------------------------------------------------------------------------------------
-# command line to generate allele specific transcripts
-cd .
+# Usage:
+
 ## prepare vcf file
 /usr/local/tabix/latest/bin/bgzip   xxx.vcf
 /usr/local/tabix/latest/bin/tabix -p vcf xxx.vcf.gz
