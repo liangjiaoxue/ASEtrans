@@ -6,6 +6,9 @@ use File::Basename;
 use Bio::SeqIO;
 use Vcf;
 
+
+#Usage: perl get_allele_specific_transcripts.pl --gff  <gff>  --genomefile <genome>  --vcf <vcf>  --out <out>
+
 my $version_num = '1.0';
 my $usage_message = usage_message($version_num);
 
@@ -19,7 +22,7 @@ GetOptions(
 	       'genomefile=s' => \$fas,
 	       'vcf=s' => \$genome_vcf_file,	      
 	       'out=s' => \$out
-	);
+);
     
 
 
@@ -60,19 +63,14 @@ while(<SRC>)
     	}
     
     if (uc($line[2]) eq 'GENE'){
-    	#$gene_id2name{$id}=$name;    	
+    	next;	
     }
     elsif(uc($line[2]) eq 'MRNA'){	
-    	#$trans2gene{$id}   = $parent;
-    	#$trans_id2name{$id} = $name;
     	$scafffold2mRNA{$line[0]}{$id} = 1;
     	$mRNA2gene{$id} = $parent;
-    	
     }
     else{
     	# exon
-    	#$exon_id2name{$id} = $name;
-    	
     	if(not exists $trans2exon{$parent}){
    	  	          my   @buff=();
    	  	          push @buff, [@line];
@@ -88,8 +86,7 @@ print "Read GFF done\n";
 
 
 ##############################################################
-### merge exons
-
+### merge exons from UTR and CDS
 for(keys  %trans2exon){
 	my @ttt=@{$trans2exon{$_}};
 	#sort
@@ -133,38 +130,8 @@ for(keys  %trans2exon){
 }
 
 print "Merge exon done\n";
-
-##########################################################
-## translate table
-my @trans = qw/
-			A A
-			T T
-			G G
-			C C
-			AT  W
-			CG 	S 	
-			AC  M 	
-			GT  K 
-			AG  R 
-			CT  Y 
-			CGT B 
-			AGT	D 	
-			ACT H 	
-			ACG V 	
-			ACGT N 
-			/;
-my %nt2translate =();
-
-while(@trans){
-				my $key = shift @trans;
-				my $value = shift @trans;
-				$nt2translate{$key}=$value;
-}
-## translate the table
-
-
-
 ####################################################################
+
 ## read genome fasta 
 my %hash_vcf =();
 open (TGT,">$out");
@@ -176,19 +143,18 @@ my $seq_obj = new Bio::SeqIO(-format => 'largefasta',
                           -file   => $fas); 
                           
 my $pseq ;
-my $paternal = 'A';
+my $paternal = 'M';
 
 while( $pseq=$seq_obj->next_seq()){  
 	
     my  $scaffold= $pseq->display_id;
-     print $scaffold,"\n";
+    print $scaffold,"\n";
      
     if(not exists $scafffold2mRNA{$scaffold}){
      	  next;
     }
-     
      ########################################################################################
-     $paternal = 'A';        
+     $paternal = 'M';        
      my $addr_out = &build_snp_hash($scaffold, $paternal);
      %hash_vcf = %{$addr_out};
      &write_transcripts ($scaffold,$paternal);
@@ -196,16 +162,18 @@ while( $pseq=$seq_obj->next_seq()){
      
      #################################################################################
      %hash_vcf  = ();
-     $paternal = 'B';   
+     $paternal = 'P';   
      $addr_out = &build_snp_hash($scaffold, $paternal); 
      %hash_vcf = %{$addr_out};
      &write_transcripts ($scaffold,$paternal);
-
-     
 }# while
 
+print "heterozygous total \t $hetero_num\n" ;
+print "heterozygous conflict \t $conflict_num\n" ;
+
+
 sub write_transcripts{
-	my ($scaffold, $paternal) = @_;
+	  my ($scaffold, $paternal) = @_;
 	
      my @mRNA_names = sort keys %{$scafffold2mRNA{$scaffold}};
      
@@ -233,12 +201,6 @@ sub write_transcripts{
      } # mRNA
 }
 
-
-     	  
-print "heterozygous \t $hetero_num\n" ;
-print "heterozygous \t $conflict_num\n" ;
-
-     
 ###################################################################
 
 sub process_plus_mRNA{
@@ -289,7 +251,6 @@ sub process_minus_mRNA{
 	@out = reverse (@out);
 	my $string_out = join('', @out );
 	return $string_out;
-
 }
 
 
@@ -311,7 +272,6 @@ sub process_plus{
 		        if(@this_site>1){
 		        	 die "Many hit this site\n";
 		        }
-		        
 		        $out_string = $this_site[0];
 		}## multiple options
 		
@@ -362,7 +322,6 @@ sub process_minus{
 	
     @out = reverse (@out);
 	my $out_final = join('',@out) ;
-	
 	return $out_final;
 }
 	
@@ -373,7 +332,6 @@ sub process_minus{
 sub get_all_site_from_hash{
 	# check every nucleotide
     my ($ref_dna,$seqid,$start,$end) = @_;
-
     my @ref_all = split(//,$ref_dna);
     
     my @out_all = ();
@@ -406,15 +364,7 @@ sub get_all_site_from_hash{
     return \@out_all;
 }# sub 
     		
-        
-sub rev_com_snp {
-   my ($seq) = @_;
-   $seq = reverse($seq);
-   
-   $seq =~ tr/ACGTMKRYBDHV/TGCAKMYRVHDB/;
-
-      return($seq);
-}  
+      
 
 
 sub build_snp_hash{
@@ -433,22 +383,21 @@ sub build_snp_hash{
         
         
         my @sample = split(/\:/,$sample);
-        
         #print $alt,"\n";
         #print $sample[0],"\n";
-        my @geno  = split(/\//,$sample[0]);
+        my @geno  = split(/\/|\|/,$sample[0]);
         
         my $geno_site = $geno[0];
         
-        if($paternal eq 'B'){
+        if($paternal eq 'P'){
         	$geno_site = $geno[1];
         }
 
-       my  @alt_original_old = split(/\,/,$alt);
-       unshift @alt_original_old, $ref;  # put 0 values
+        my  @alt_original_old = split(/\,/,$alt);
+        unshift @alt_original_old, $ref;  # put 0 values
          
-        if (@alt_original_old>1) {
-         	   $hetero_num ++;
+        if (@alt_original_old > 1) {
+         	    $hetero_num ++;
         }
         
          my  $first_alt  = $alt_original_old[$geno_site];## change as input
@@ -456,14 +405,12 @@ sub build_snp_hash{
          my  $ref_len = length($ref);
          if($ref_len == 1){		    	
 		      $vcf_hash{$index}{$first_alt}=1;
-		    	
          } # ref eq 1
          else{ # ref length >1
 	         	 my @ref_all = split(//,$ref);
 	         	 if(@ref_all+0!= $ref_len ){
 	    		      die "What's This Field";
 	    	     }
-			       
 			     my @alt_all = split(//,$first_alt);
 			     for(my $i=0;$i<@ref_all;$i++){
 			    			my $site_new = $pos+$i;
@@ -535,8 +482,6 @@ sub re_co{
 }
 
 
-
-
 sub usage_message {
     my $version = shift;
     my $usage_message = "\n Trans extraction $version
@@ -546,43 +491,5 @@ Usage: perl get_allele_specific_transcripts.pl --gff  <gff>  --genomefile <genom
     return $usage_message;
 }
 
-
-
-
-
-
 __END__
 
-   
-my @trans = qw/
-A A T
-T T A
-G G C
-C C G
-
-AT  W W
-CG 	S S
-
-AC  M K
-GT  K M
-AG  R Y
-CT  Y R
-CGT B V
-AGT	D 	H
-ACT H 	D
-ACG V 	B
-
-ACGT N  N
-/;
-
-
-
-     
-     
-     
-     
-     
-     
-     
-     
- 
