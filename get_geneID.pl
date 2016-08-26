@@ -5,6 +5,8 @@ use Getopt::Long;
 use File::Basename;
 use Bio::SeqIO;
 
+#Usage: perl get_geneID.pl --gff  <gff>  --out <out>
+
 
 my $version_num = '1.0';
 
