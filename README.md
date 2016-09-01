@@ -14,8 +14,7 @@ Prepare vcf file:
 
 /usr/local/tabix/latest/bin/tabix -p vcf xxx.vcf.gz
 
-Get transcripts:
-
+Get transcripts:  
 perl get_allele_specific_transcripts.pl --gff  gff  --genomefile genome  --vcf vcf  --out out
 
       vcf --> vcf data of hybrid sample
@@ -25,16 +24,12 @@ perl get_allele_specific_transcripts.pl --gff  gff  --genomefile genome  --vcf v
       This script requires Vcf.pm
 
 
-Get gene list file:
-
+Get gene list file:  
 perl get_geneID.pl --gff  gff  --out out
 
 
-# DEMO command line for RSEM
-
-cd RSEM
-
-
+# DEMO command line for RSEM  
+cd RSEM  
 /usr/local/rsem/latest/rsem-prepare-reference  \  
    --transcript-to-gene-map P1979_gene_list.txt  \  
            --bowtie2 --bowtie2-path /usr/local/bowtie2/latest/bin/ \  
