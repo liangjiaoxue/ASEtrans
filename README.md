@@ -3,6 +3,8 @@ Codes for allele specific expression analysis
 
 Two Perl scripts were provided to generate the transcriptome and genes list for RSEM.   
 get_allele_specific_transcripts.pl introduce variants from a VCF file into transcripts defined in one GFF file.  
+This code assumes that the variants have been phased, and stored as first record in "sample" fields of the VCF files.
+
 get_geneID.pl  generate the corresponding lists between allele IDs and transcripts IDs.  
 
 -----------------------------------------------------------------------------------------
