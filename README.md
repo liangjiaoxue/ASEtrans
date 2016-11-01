@@ -1,17 +1,17 @@
 # Pipeline for allelic expression analysis
-Read mapping  
-      BWA-MEM : Fastq -> BAM  
-Variant calling  
-      FreeBayes : BAM -> VCF  
-Haplotype phasing 
-      Whatshap (Read-backed phasing) :  BAM, VCF -> VCF
-      Hpsort (Python, sorting with parent species) : VCF -> VCF
-Construction of allele-specific transcriptomes
-       ASEtrans (deposited in GitHub) : GFF, VCF -> FASTA
-Estimation of allele expression levels
-       RSEM : Fasta, Fastq -> count table
-Differential expression analysis
-       edgeR : count table -> P values
+Read mapping   
+      BWA-MEM : Fastq -> BAM   
+Variant calling   
+      FreeBayes : BAM -> VCF   
+Haplotype phasing   
+      Whatshap (Read-backed phasing) :  BAM, VCF -> VCF   
+      Hpsort (Python, sorting with parent species) : VCF -> VCF   
+Construction of allele-specific transcriptomes   
+       ASEtrans (deposited in GitHub) : GFF, VCF -> FASTA   
+Estimation of allele expression levels   
+       RSEM : Fasta, Fastq -> count table   
+Differential expression analysis   
+       edgeR : count table -> P values   
 
 
 
