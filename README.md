@@ -1,4 +1,4 @@
-# Pipeline for allelic expression analysis
+# A pipeline for allelic expression analysis
 **Read mapping**   
      BWA-MEM : Fastq -> BAM   
 **Variant calling**   
