@@ -6,12 +6,10 @@ use File::Basename;
 use Bio::SeqIO;
 use Vcf;
 
-
-#Usage: perl get_allele_specific_transcripts.pl --gff  <gff>  --genomefile <genome>  --vcf <vcf>  --out <out>
+#Usage: perl get_allele_specific_transcripts.pl --gff  <gff>  --genomefile <genome>  --vcf <vcf.gz>  --out <out>
 
 my $version_num = '1.0';
 my $usage_message = usage_message($version_num);
-
 my $command_line = join(" ", @ARGV);
 
 ###### Get  options ###############
@@ -24,127 +22,36 @@ GetOptions(
 	       'out=s' => \$out
 );
     
-
-
-
 if( $gff  eq '' or $fas  eq  '' or $genome_vcf_file eq '' or  $out eq ''){
     my $usage_message = usage_message($version_num);
 	   die "$usage_message\n";
 }
 
 #####################################################
+## Main function
+
 ## get mRNA information
-open (SRC,"$gff");
 my %scafffold2mRNA = ();
 my %trans2exon = ();
-my %mRNA2gene = ();
-while(<SRC>) 
-{
-	if(m/^#/)
-	{
-		next;
-	}	
-    my @line = split(/\t/,$_);
-    
-    if($line[8] =~ m/([^\r\n]+)/){
-    	  $line[8] = $1;
-    }    
-    my $id='';
-    my $name='';
-    my $parent = '';
-       if($line[8] =~m/ID\=([^\;]+)/){
-    		$id=$1;
-    	}
-    	if($line[8] =~m/Name\=([^\;]+)/){
-    		$name =$1;
-    	}
-    	if($line[8] =~m/Parent\=([^\;]+)/){
-    		$parent =$1;
-    	}
-    
-    if (uc($line[2]) eq 'GENE'){
-    	next;	
-    }
-    elsif(uc($line[2]) eq 'MRNA'){	
-    	$scafffold2mRNA{$line[0]}{$id} = 1;
-    	$mRNA2gene{$id} = $parent;
-    }
-    else{
-    	# exon
-    	if(not exists $trans2exon{$parent}){
-   	  	          my   @buff=();
-   	  	          push @buff, [@line];
-   	  	          $trans2exon{$parent} = \@buff;
-   	    }
-   	    else{
-   	  	          push @{$trans2exon{$parent}}, [@line];
-   	    }
-    }
-} ## while file
-
+my %mRNA2gene  = ();
+&read_gff_file($gff);
 print "Read GFF done\n";
-
-
-##############################################################
 ### merge exons from UTR and CDS
-for(keys  %trans2exon){
-	my @ttt=@{$trans2exon{$_}};
-	#sort
-	@ttt=sort{$a->[3]<=>$b->[3]}@ttt;
-	#fusion
-	my @sss=();
-	for(@ttt){
-		my @gff=@{$_};
-		push @sss,$gff[3].'-'.$gff[4];
-	}
-	my $test=join('|',@sss);
-	  @sss=split(/\-/,$test);
-	  
-	  for(my $i=0;$i<@sss;$i++){
-	  	if($sss[$i]=~ m/\|/){
-	  		my @ccc=split(/\|/,$sss[$i]);
-	  		if($ccc[0] == $ccc[1]-1){
-	  			$sss[$i]='';
-	  		}
-	  	}
-	  }
-	  
-	  $test=join('-',@sss);
-	  $test=~s/\-+/\-/g; ##  + impotant
-	  @sss=split(/\|/,$test);
-	  my @output=();
-	  my @temp=@{$ttt[0]};
-	  
-	 for(@sss){
-	    	my @ccc=split(/\-/,$_);
-	  	    $temp[3]=$ccc[0];
-	  	    $temp[4]=$ccc[1];
-	  	    push @output,[@temp];
-	  	    
-	  	    ###### output exon
-	  	    $temp[2] =   'exon';
-	  	  #  print TGT join("\t", @temp),"\n"; 
-	 }
-	 $trans2exon{$_} = \@output;
-	 
-}
-
+&merge_UTR_CDS();
 print "Merge exon done\n";
-####################################################################
 
-## read genome fasta 
+
+########################
+## read genome fasta and extract transcripts
 my %hash_vcf =();
 open (TGT,">$out");
 my $hetero_num   = 0;
 my $conflict_num = 0;
 my $snp_site = 0;
-
 my $seq_obj = new Bio::SeqIO(-format => 'largefasta',                                   
                           -file   => $fas); 
-                          
 my $pseq ;
 my $paternal = 'M';
-
 while( $pseq=$seq_obj->next_seq()){  
 	
     my  $scaffold= $pseq->display_id;
@@ -153,14 +60,13 @@ while( $pseq=$seq_obj->next_seq()){
     if(not exists $scafffold2mRNA{$scaffold}){
      	  next;
     }
-     ########################################################################################
+     ################
      $paternal = 'M';        
      my $addr_out = &build_snp_hash($scaffold, $paternal);
      %hash_vcf = %{$addr_out};
      &write_transcripts ($scaffold,$paternal);
        
-     
-     #################################################################################
+     ################
      %hash_vcf  = ();
      $paternal = 'P';   
      $addr_out = &build_snp_hash($scaffold, $paternal); 
@@ -170,6 +76,106 @@ while( $pseq=$seq_obj->next_seq()){
 
 print "heterozygous total \t $hetero_num\n" ;
 print "heterozygous conflict \t $conflict_num\n" ;
+
+
+
+
+
+########################################################
+## Below are functions called by the main process
+
+sub read_gff_file{
+	my $file_in = $_[0];
+	
+	open (SRC,"$file_in")|| die "Cann't open GFF file\n";
+	while(<SRC>) 
+	{
+		if(m/^#/)
+		{
+			next;
+		}	
+	    my @line = split(/\t/,$_);
+	    
+	    if($line[8] =~ m/([^\r\n]+)/){
+	    	  $line[8] = $1;
+	    }    
+	    my $id='';
+	    my $name='';
+	    my $parent = '';
+	       if($line[8] =~m/ID\=([^\;]+)/){
+	    		$id=$1;
+	    	}
+	    	if($line[8] =~m/Name\=([^\;]+)/){
+	    		$name =$1;
+	    	}
+	    	if($line[8] =~m/Parent\=([^\;]+)/){
+	    		$parent =$1;
+	    	}
+	    
+	    if (uc($line[2]) eq 'GENE'){
+	    	next;	
+	    }
+	    elsif(uc($line[2]) eq 'MRNA'){	
+	    	$scafffold2mRNA{$line[0]}{$id} = 1;
+	    	$mRNA2gene{$id} = $parent;
+	    }
+	    else{
+	    	# exon
+	    	if(not exists $trans2exon{$parent}){
+	   	  	          my   @buff=();
+	   	  	          push @buff, [@line];
+	   	  	          $trans2exon{$parent} = \@buff;
+	   	    }
+	   	    else{
+	   	  	          push @{$trans2exon{$parent}}, [@line];
+	   	    }
+	    }
+	} ## while file
+}
+
+sub merge_UTR_CDS{
+	# use global variables
+	for(keys  %trans2exon){
+		my @ttt=@{$trans2exon{$_}};
+		#sort
+		@ttt=sort{$a->[3]<=>$b->[3]}@ttt;
+		#fusion
+		my @sss=();
+		for(@ttt){
+			my @gff=@{$_};
+			push @sss,$gff[3].'-'.$gff[4];
+		}
+		my $test=join('|',@sss);
+		  @sss=split(/\-/,$test);
+		  
+		  for(my $i=0;$i<@sss;$i++){
+		  	if($sss[$i]=~ m/\|/){
+		  		my @ccc=split(/\|/,$sss[$i]);
+		  		if($ccc[0] == $ccc[1]-1){
+		  			$sss[$i]='';
+		  		}
+		  	}
+		  }
+		  
+		  $test=join('-',@sss);
+		  $test=~s/\-+/\-/g; ##  + impotant
+		  @sss=split(/\|/,$test);
+		  my @output=();
+		  my @temp=@{$ttt[0]};
+		  
+		 for(@sss){
+		    	my @ccc=split(/\-/,$_);
+		  	    $temp[3]=$ccc[0];
+		  	    $temp[4]=$ccc[1];
+		  	    push @output,[@temp];
+		  	    
+		  	    ###### output exon
+		  	    $temp[2] =   'exon';
+		  	  #  print TGT join("\t", @temp),"\n"; 
+		 }
+		 $trans2exon{$_} = \@output;
+	}
+}
 
 
 sub write_transcripts{
@@ -328,7 +334,6 @@ sub process_minus{
 #########################################
 
 
-
 sub get_all_site_from_hash{
 	# check every nucleotide
     my ($ref_dna,$seqid,$start,$end) = @_;
@@ -440,8 +445,6 @@ sub build_snp_hash{
 }# while
 
 
-
-
 sub regenerate_hash {
 	my $hash_addr = $_[0];
 	
@@ -472,15 +475,12 @@ sub regenerate_hash {
 	 return \%vcf_site;
 }
 
-
-
 sub re_co{
    my ($seq) = @_;
    $seq = reverse($seq);
    $seq =~ tr/ACGT/TGCA/;
    return($seq);
 }
-
 
 sub usage_message {
     my $version = shift;
@@ -492,4 +492,3 @@ Usage: perl get_allele_specific_transcripts.pl --gff  <gff>  --genomefile <genom
 }
 
 __END__
-
