@@ -15,7 +15,7 @@
 
 
 
-# ASEtrans
+## ASEtrans
 Codes for allele specific expression analysis  
 
 Two Perl scripts were provided to generate the transcriptome and genes list for RSEM.   
@@ -25,7 +25,7 @@ This code assumes that the variants have been phased, and stored as first record
 get_geneID.pl  generate the corresponding lists between allele IDs and transcripts IDs.  
 
 -----------------------------------------------------------------------------------------
-# Usage:
+## Usage:
 
 Prepare vcf file:
 
@@ -47,7 +47,7 @@ Get gene list file:
 perl get_geneID.pl --gff  gff  --out out
 
 
-# DEMO command line for RSEM  
+## DEMO command line for RSEM  
 cd RSEM  
 /usr/local/rsem/latest/rsem-prepare-reference  \  
    --transcript-to-gene-map P1979_gene_list.txt  \  
